@@ -25,17 +25,17 @@ const client = new Client({
 
 client.on('qr', async (qr) => {
     try {
-        const code = await client.requestPairingCode(PHONE_NUMBER);
+        const pairingCode = await client.requestPairingCode(PHONE_NUMBER);
         console.log('====================================');
-        console.log(`📌 كود الربط الخاص بك هو: ${code}`);
+        console.log(`📌 كود الربط الخاص بك هو: ${pairingCode}`);
         console.log('====================================');
     } catch (err) {
-        console.error('حدث خطأ أثناء طلب كود الربط:', err);
+        console.error('❌ خطأ في طلب الكود:', err);
     }
 });
 
 client.on('ready', () => {
-    console.log('✅ تم الاتصال بنجاح! البوت يعمل الآن.');
+    console.log('✅ تم الاتصال بنجاح!');
 });
 
 client.initialize();
