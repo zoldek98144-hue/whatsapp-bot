@@ -1,5 +1,6 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+
+const PHONE_NUMBER = '249909454277';
 
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -22,13 +23,19 @@ const client = new Client({
     }
 });
 
-client.on('qr', (qr) => {
-    console.log('📌 امسح رمز الاستجابة السريعة (QR) أدناه:');
-    qrcode.generate(qr, { small: true });
+client.on('qr', async (qr) => {
+    try {
+        const code = await client.requestPairingCode(PHONE_NUMBER);
+        console.log('====================================');
+        console.log(`📌 كود الربط الخاص بك هو: ${code}`);
+        console.log('====================================');
+    } catch (err) {
+        console.error('حدث خطأ أثناء طلب كود الربط:', err);
+    }
 });
 
 client.on('ready', () => {
-    console.log('✅ البوت يعمل الآن بكفاءة!');
+    console.log('✅ تم الاتصال بنجاح! البوت يعمل الآن.');
 });
 
 client.initialize();
