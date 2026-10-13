@@ -1,19 +1,37 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const express = require('express');
+const qrcode = require('qrcode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.get('/', (req, res) => res.send('Bot is active'));
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+let qrCodeData = '';
 
-const PHONE_NUMBER = '249909454277';
+// صفحة الويب التي ستعرض QR Code مباشرة
+app.get('/', (req, res) => {
+    if (!qrCodeData) {
+        return res.send('<h2>البوت جاري إقلاعه أو تم ربطه بالفعل. يرجى تحديث الصفحة بعد قليل...</h2>');
+    }
+    
+    // تحويل نص الـ QR إلى صورة تفاعلية تظهر على المتصفح
+    qrcode.toDataURL(qrCodeData, (err, url) => {
+        if (err) return res.send('خطأ في توليد صورة الـ QR');
+        res.send(`
+            <div style="text-align: center; margin-top: 50px;">
+                <h2>امسح رمز الاستجابة السريعة (QR Code) لربط الواتساب</h2>
+                <img src="${url}" alt="WhatsApp QR Code" style="width: 300px; height: 300px;"/>
+                <p>قم بتحديث الصفحة إذا لم يظهر الرمز أو جدد الصفحة بعد المسح.</p>
+            </div>
+        `);
+    });
+});
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -27,20 +45,16 @@ const client = new Client({
     }
 });
 
-client.on('ready', () => {
-    console.log('✅ تم ربط البوت بنجاح تام!');
+client.on('qr', (qr) => {
+    console.log('📌 تم استقبال QR Code جديد، وسيتم عرضه على موقع الويب.');
+    qrCodeData = qr;
 });
 
-client.initialize().then(async () => {
-    console.log('🔄 جاري طلب كود الربط برقم الهاتف...');
-    try {
-        const pairingCode = await client.requestPairingCode(PHONE_NUMBER);
-        console.log('====================================');
-        console.log(`📌 كود الربط الخاص بك هو: ${pairingCode}`);
-        console.log('====================================');
-    } catch (err) {
-        console.error('❌ خطأ أثناء طلب كود الربط:', err);
-    }
-}).catch(err => {
+client.on('ready', () => {
+    console.log('✅ تم ربط البوت بنجاح تام!');
+    qrCodeData = ''; // إخفاء الرمز بعد الاتصال الناجح
+});
+
+client.initialize().catch(err => {
     console.error('❌ خطأ في تهيئة العميل:', err);
 });
