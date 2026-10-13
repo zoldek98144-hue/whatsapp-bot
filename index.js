@@ -38,7 +38,7 @@ client.initialize().then(async () => {
         console.log('====================================');
         console.log(`📌 كود الربط الخاص بك هو: ${pairingCode}`);
         console.log('====================================');
-    } cratch (err) {
+    } catch (err) {
         console.error('❌ خطأ أثناء طلب كود الربط:', err);
     }
 }).catch(err => {
