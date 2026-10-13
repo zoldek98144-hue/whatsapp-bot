@@ -11,42 +11,38 @@ const PHONE_NUMBER = '249909454277';
 
 const client = new Client({
     authStrategy: new LocalAuth(),
-    webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1014160912-alpha.html',
-    },
     puppeteer: {
         headless: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--single-process'
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
         ],
     }
 });
 
 client.on('qr', async (qr) => {
-    console.log('📌 حدث QR تم تفعيله، جاري طلب كود الربط...');
-    try {
-        const pairingCode = await client.requestPairingCode(PHONE_NUMBER);
-        console.log('====================================');
-        console.log(`📌 كود الربط الخاص بك هو: ${pairingCode}`);
-        console.log('====================================');
-    } catch (err) {
-        console.error('❌ خطأ تفصيلي أثناء طلب كود الربط:', err);
-    }
-});
-
-client.on('auth_failure', msg => {
-    console.error('❌ فشل المصادقة:', msg);
+    // سيتم تخطي طباعة QR العادي ونطلب كود الربط مباشرة
 });
 
 client.on('ready', () => {
     console.log('✅ تم ربط البوت بنجاح تام!');
 });
 
-client.initialize().catch(err => {
+client.initialize().then(async () => {
+    console.log('🔄 جاري طلب كود الربط برقم الهاتف...');
+    try {
+        const pairingCode = await client.requestPairingCode(PHONE_NUMBER);
+        console.log('====================================');
+        console.log(`📌 كود الربط الخاص بك هو: ${pairingCode}`);
+        console.log('====================================');
+    } catch (err) {
+        console.error('❌ خطأ أثناء طلب كود الربط:', err);
+    }
+}).catch(err => {
     console.error('❌ خطأ في تهيئة العميل:', err);
 });
