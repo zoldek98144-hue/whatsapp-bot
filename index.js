@@ -3,6 +3,10 @@ const qrcode = require('qrcode-terminal');
 
 const client = new Client({
     authStrategy: new LocalAuth(),
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1014160912-alpha.html',
+    },
     puppeteer: {
         headless: true,
         args: [
@@ -24,13 +28,7 @@ client.on('qr', (qr) => {
 });
 
 client.on('ready', () => {
-    console.log('✅ البوت بنجاح وهو يعمل الآن بكفاءة!');
-});
-
-client.on('message', async (msg) => {
-    if (msg.body === '.مرحبا' || msg.body === 'مرحبا') {
-        await msg.reply('أهلاً بك، البوت يعمل بنجاح على السحابة!');
-    }
+    console.log('✅ البوت يعمل الآن بكفاءة!');
 });
 
 client.initialize();
