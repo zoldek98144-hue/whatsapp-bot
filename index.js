@@ -13,6 +13,7 @@ const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -20,13 +21,10 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
+            '--single-process',
             '--disable-gpu'
         ],
     }
-});
-
-client.on('qr', async (qr) => {
-    // سيتم تخطي طباعة QR العادي ونطلب كود الربط مباشرة
 });
 
 client.on('ready', () => {
@@ -40,7 +38,7 @@ client.initialize().then(async () => {
         console.log('====================================');
         console.log(`📌 كود الربط الخاص بك هو: ${pairingCode}`);
         console.log('====================================');
-    } catch (err) {
+    } cratch (err) {
         console.error('❌ خطأ أثناء طلب كود الربط:', err);
     }
 }).catch(err => {
