@@ -1,60 +1,35 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
 const express = require('express');
-const qrcode = require('qrcode');
-
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.get('/', (req,res)=>res.send('GLITSH BOT 24H ONLINE 👑'));
+app.listen(3000, ()=>console.log('Web online'));
 
-let qrCodeData = '';
+require('dns').setDefaultResultOrder('ipv4first');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const pino = require('pino');
+const NUMBER = '249909454277';
+const NAME = 'GLITSH';
+function fancy(t){return `╭─━━━━━━━━━━━━─╮\n 👑 ${NAME} ✨\n╰─━━━━━━━━━━━━─╯\n\n${t}\n\n> ✨ 𝑮𝑳𝑰𝑻𝑺𝑯 𝑩𝑶𝑻 ✨`;}
 
-app.get('/', (req, res) => {
-    if (!qrCodeData) {
-        return res.send('<h2>البوت جاري إقلاعه أو تم ربطه بالفعل. يرجى تحديث الصفحة بعد قليل...</h2>');
-    }
-    
-    qrcode.toDataURL(qrCodeData, (err, url) => {
-        if (err) return res.send('خطأ في توليد صورة الـ QR');
-        res.send(`
-            <div style="text-align: center; margin-top: 50px;">
-                <h2>مرحباً بك في بوت جلتش</h2>
-                <h3>امسح رمز الاستجابة السريعة (QR Code) لربط الواتساب</h3>
-                <img src="${url}" alt="WhatsApp QR Code" style="width: 300px; height: 300px;"/>
-                <p>قم بتحديث الصفحة إذا لم يظهر الرمز أو جدد الصفحة بعد المسح.</p>
-            </div>
-        `);
-    });
-});
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        headless: true,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-gpu'
-        ],
-    }
-});
-
-client.on('qr', (qr) => {
-    console.log('📌 تم استقبال QR Code جديد، وسيتم عرضه على موقع الويب.');
-    qrCodeData = qr;
-});
-
-client.on('ready', () => {
-    console.log('✅ تم ربط بوت جلتش بنجاح تام!');
-    qrCodeData = '';
-});
-
-client.initialize().catch(err => {
-    console.error('❌ خطأ في تهيئة العميل:', err);
-});
+async function start(){
+  const { state, saveCreds } = await useMultiFileAuthState('session');
+  const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }), printQRInTerminal:false, browser:[NAME,'Chrome','1.0'], keepAliveIntervalMs:10000, markOnlineOnConnect:true });
+  sock.ev.on('creds.update', saveCreds);
+  if(!sock.authState.creds.registered){ await new Promise(r=>setTimeout(r,3000)); try{ console.log('كود الربط:', await sock.requestPairingCode(NUMBER)); }catch(e){ console.log(e.message); } }
+  sock.ev.on('connection.update', ({connection, lastDisconnect})=>{
+    if(connection==='open'){ console.log(NAME+' متصل 24H'); setInterval(()=>{ try{sock.sendPresenceUpdate('available')}catch{} }, 15*60*1000); }
+    if(connection==='close' && lastDisconnect?.error?.output?.statusCode!==DisconnectReason.loggedOut) setTimeout(start,5000);
+  });
+  sock.ev.on('messages.upsert', async ({messages})=>{
+    const m=messages[0]; if(!m.message||!m.key.fromMe) return;
+    const jid=m.key.remoteJid; let text=(m.message.conversation||m.message.extendedTextMessage?.text||'').trim(); if(!text) return;
+    if(text.startsWith('#')) text=text.slice(1).trim();
+    const [raw,...args]=text.split(/\s+/); const cmd=raw.toLowerCase();
+    const reply=t=>sock.sendMessage(jid,{text:fancy(t)},{quoted:m});
+    const isGroup=jid.endsWith('@g.us'); const mentioned=m.message.extendedTextMessage?.contextInfo?.mentionedJid||[];
+    try{
+      if(['قائمة','قائمه','الاوامر','menu','help'].includes(cmd)){ await reply(`🤖 قـائـمـة الأوامـر 🤖\n\n• صورة +رقم\n• صورة_انمي ناروتو بروفايل\n• صورة_انمي ناروتو خلفية\n\n👑 القروب 👑\n• كشف_بوتات\n• طرد @\n• ترقية @\n• تنزيل @\n• قفل\n• فتح\n\n✨ بدون # شغال ✨`); }
+      else if(cmd==='صورة'){ const num=args.join('').replace(/\D/g,''); const [r]=await sock.onWhatsApp(num); let bio='غير متاح'; try{ const s=await sock.fetchStatus(r.jid); const st=Array.isArray(s)?s[0]?.status:s; bio=(st?.status||st)??'غير متاح'; }catch{} let url=null; try{ url=await sock.profilePictureUrl(r.jid,'image'); }catch{} if(url) await sock.sendMessage(jid,{image:{url},caption:fancy(`👤 +${num}\n📝 ${bio}`)},{quoted:m}); else await reply(`👤 +${num}\n📝 ${bio}`); }
+      else if(isGroup && ['طرد','ترقية','تنزيل'].includes(cmd)){ const map={'طرد':'remove','ترقية':'promote','تنزيل':'demote'}; await sock.groupParticipantsUpdate(jid,mentioned,map[cmd]); await reply(`✅ تم ${cmd}`); }
+      else if(isGroup && cmd==='قفل'){ await sock.groupSettingUpdate(jid,'announcement'); await reply('🔒 تم القفل'); }
+      else if(isGroup && cmd==='فتح'){ await sock.groupSettingUpdate(jid,'not_announcement'); await reply('🔓 تم الفتح'); }
+      else if(cmd==='صورة_انمي'||cmd==='صوره_انمي'){ const type=args[args.length-1]; const isBg=type==='خلفية'; const name=(isBg||type==='بروفايل')?args.slice(0,-1).join(' '):args.join(' '); try{ const q='query($s:String){Media(search:$s,type:ANIME){title{romaji}coverImage{extraLarge}bannerImage}}'; const res=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,variables:{s:name}})}); const d=await res.json(); const media=d.data?.Media; let url=isBg?media.bannerImage:media.coverImage.extraLarge;
